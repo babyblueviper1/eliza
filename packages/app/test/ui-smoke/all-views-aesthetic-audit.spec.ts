@@ -55,6 +55,7 @@ const BUILTIN_TAB_PATHS: Record<string, string> = {
   automations: "/automations",
   inventory: "/wallet",
   documents: "/character/documents",
+  files: "/apps/files",
   plugins: "/apps/plugins",
   skills: "/apps/skills",
   "fine-tuning": "/apps/fine-tuning",
@@ -71,6 +72,7 @@ const BUILTIN_TAB_PATHS: Record<string, string> = {
   tutorial: "/tutorial",
   help: "/help",
   logs: "/apps/logs",
+  background: "/background",
 };
 
 // ── navigation TAB_PATHS coverage guard (#8796) ──────────────────────────────

@@ -409,7 +409,6 @@ function ensureFileLog(): boolean {
 
     const promptLogPath = pathMod.join(logDir, "prompts.log");
     const chatLogPath = pathMod.join(logDir, "chat.log");
-
     _fileLogFd = fs.openSync(logFilePath, "a");
     _promptLogFd = fs.openSync(promptLogPath, "a");
     _chatLogFd = fs.openSync(chatLogPath, "a");
