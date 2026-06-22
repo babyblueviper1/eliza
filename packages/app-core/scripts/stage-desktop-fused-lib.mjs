@@ -308,6 +308,13 @@ run("cmake", [
 run("cmake", [
   "--build",
   buildDir,
+  // Multi-config generators (Visual Studio, Xcode) ignore CMAKE_BUILD_TYPE at
+  // configure time and pick the config here; without this they default to
+  // Debug, which links the non-redistributable Debug CRT (vcruntime140d.dll)
+  // and produces a slower, non-shippable lib. Single-config generators (Ninja,
+  // Unix Makefiles) accept and ignore --config, so this is safe everywhere.
+  "--config",
+  "Release",
   "--target",
   "elizainference",
   "-j",
@@ -317,14 +324,29 @@ run("cmake", [
 // Collect the produced shared libs (the fused lib + its ggml/llama/mtmd
 // backends) and stage them as one consistent set. Sweep the out dir first so a
 // backend switch never leaves a stale sibling the loader could pick up.
-const binDir = path.join(buildDir, "bin");
+// Visual Studio / Xcode are multi-config generators: artifacts land in
+// bin/<Config> (we built Release above), not bin/. Single-config generators
+// (Ninja, Unix Makefiles) emit straight into bin/. Resolve whichever exists so
+// the same staging logic works on every host.
+const binDir =
+  [
+    path.join(buildDir, "bin", "Release"),
+    path.join(buildDir, "bin"),
+    path.join(buildDir, "bin", "Debug"),
+  ].find((d) => existsSync(d)) ?? path.join(buildDir, "bin");
 const libExt =
   process.platform === "darwin"
     ? ".dylib"
     : process.platform === "win32"
       ? ".dll"
       : ".so";
-const fusedName = `libelizainference${libExt}`;
+// MSVC does not prepend the `lib` prefix to shared libraries, so on Windows the
+// fused lib is `elizainference.dll`; Linux/macOS produce `libelizainference.*`.
+// The runtime's resolveFusedLibraryPath() accepts both names on win32.
+const fusedName =
+  process.platform === "win32"
+    ? `elizainference${libExt}`
+    : `libelizainference${libExt}`;
 if (!existsSync(path.join(binDir, fusedName))) {
   die(`build did not produce ${fusedName} in ${binDir}`);
 }
@@ -378,7 +400,9 @@ function definedSymbols(libPath) {
     process.platform === "darwin"
       ? { cmd: "nm", args: ["-gU", libPath] }
       : process.platform === "win32"
-        ? { cmd: "objdump", args: ["-T", libPath] }
+        ? // -T lists ELF dynamic symbols; a PE/COFF DLL keeps its exports in
+          // the Export Directory, which objdump surfaces under -p, not -T.
+          { cmd: "objdump", args: ["-p", libPath] }
         : { cmd: "nm", args: ["-D", "--defined-only", libPath] };
   try {
     return execFileSync(tool.cmd, tool.args, {
