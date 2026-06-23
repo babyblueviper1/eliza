@@ -383,12 +383,15 @@ function actionCallSummary(
 // Built-in handlers
 // ---------------------------------------------------------------------------
 
-registerFinalCheckHandler("custom", async (check, { ctx }) => {
+registerFinalCheckHandler("custom", async (check, { runtime, ctx }) => {
   const { predicate } = check as { predicate?: unknown };
   if (typeof predicate !== "function") {
     return { status: "failed", detail: "custom check missing predicate" };
   }
-  const result = await (predicate as (c: ScenarioContext) => unknown)(ctx);
+  const result = await (predicate as (c: ScenarioContext) => unknown)({
+    ...ctx,
+    runtime,
+  });
   if (result === undefined || result === null) {
     return { status: "passed", detail: "predicate returned undefined" };
   }

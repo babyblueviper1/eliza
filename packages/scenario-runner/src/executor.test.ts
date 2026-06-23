@@ -29,6 +29,34 @@ function createRuntime(
 }
 
 describe("scenario executor action turns", () => {
+  it("passes the live runtime through custom final check context", async () => {
+    const runtime = createRuntime([]);
+    const predicate = vi.fn((ctx: { runtime?: unknown }) =>
+      ctx.runtime === runtime ? undefined : "runtime missing from context",
+    );
+
+    const report = await runScenario(
+      {
+        id: "custom-final-check-runtime",
+        title: "Custom final check runtime",
+        domain: "executor",
+        turns: [],
+        finalChecks: [{ type: "custom", predicate }],
+      },
+      runtime,
+      {
+        minJudgeScore: 0.8,
+        providerName: "unit-test",
+        turnTimeoutMs: 1_000,
+      },
+    );
+
+    expect(report.status).toBe("passed");
+    expect(predicate).toHaveBeenCalledWith(
+      expect.objectContaining({ runtime }),
+    );
+  });
+
   it("executes a registered action turn with real options and captures its trace", async () => {
     const validate = vi.fn(async () => true);
     const handler = vi.fn(

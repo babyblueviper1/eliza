@@ -88,7 +88,7 @@ describe("useDefaultProviderPresets", () => {
     expect(last?.platform).toBe("mobile");
   });
 
-  it("cloud agent on any device picks Eliza Cloud", async () => {
+  it("cloud agent on any device picks Edge TTS and Eliza Cloud ASR", async () => {
     fetchMock.mockResolvedValueOnce({
       mode: "cloud",
       deploymentRuntime: "cloud",
@@ -108,13 +108,13 @@ describe("useDefaultProviderPresets", () => {
     });
     const last = seen[seen.length - 1];
     expect(last?.defaults).toEqual({
-      tts: "elevenlabs",
+      tts: "edge",
       asr: "eliza-cloud",
     });
     expect(last?.runtimeMode).toBe("cloud");
   });
 
-  it("remote-controller picks Eliza Cloud", async () => {
+  it("remote-controller picks Edge TTS and Eliza Cloud ASR", async () => {
     fetchMock.mockResolvedValueOnce({
       mode: "remote",
       deploymentRuntime: "remote",
@@ -135,7 +135,7 @@ describe("useDefaultProviderPresets", () => {
     const last = seen[seen.length - 1];
     expect(last?.runtimeMode).toBe("remote");
     expect(last?.defaults).toEqual({
-      tts: "elevenlabs",
+      tts: "edge",
       asr: "eliza-cloud",
     });
   });
@@ -152,9 +152,9 @@ describe("useDefaultProviderPresets", () => {
     );
     const first = seen[0];
     expect(first?.loading).toBe(true);
-    // Loading state still resolves a safe default — Eliza Cloud everything.
+    // Loading state still resolves a safe default.
     expect(first?.defaults).toEqual({
-      tts: "elevenlabs",
+      tts: "edge",
       asr: "eliza-cloud",
     });
   });

@@ -48,6 +48,18 @@ describe("DynamicViewLoader", () => {
     vi.useRealTimers();
   });
 
+  it("exposes app-core ui-compat selector hooks to host-external view bundles", async () => {
+    const importer = window.__ELIZA_DYNAMIC_VIEW_IMPORT__;
+    expect(importer).toBeTypeOf("function");
+
+    const compat = await importer?.("@elizaos/app-core/ui-compat");
+
+    expect(compat?.client).toBeTruthy();
+    expect(compat?.GameOperatorShell).toBeTypeOf("function");
+    expect(compat?.useAppSelector).toBeTypeOf("function");
+    expect(compat?.useAppSelectorShallow).toBeTypeOf("function");
+  });
+
   it("imports absolute remote bundleUrl directly", async () => {
     const bundleUrl = "https://capability.example.test/assets/remote-panel.js";
     const importBundle = vi.fn(async () => ({

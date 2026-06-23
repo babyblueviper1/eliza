@@ -73,7 +73,13 @@ export function LoadingScreen({
       }
     })();
 
-    return () => controller.abort();
+    return () => {
+      try {
+        controller.abort();
+      } catch {
+        // Ignore abort cleanup failures from mocked fetch implementations.
+      }
+    };
   }, [vrmUrl]);
 
   const meta = PHASE_META[phase];
