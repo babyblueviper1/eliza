@@ -8,16 +8,18 @@
  * kernels, no fused voice/vision. This is the honest "reduced optimizations"
  * path.
  *
- * Runtime binding: the explicit-`modelPath` `llama-cpp-capacitor` context
- * (`initCapacitorLlama({ model })`). That binding ships on mobile
- * (`ELIZA_PLATFORM=android|ios`); on desktop the explicit-path FFI binding (the
- * retired libllama + eliza-llama-shim) is not built into the shipping
- * `libelizainference`, so `available()` reports false there and the dispatcher
- * raises a typed `GenericRuntimeUnavailableError` rather than mis-loading the
- * GGUF through the bundle-locked fused path.
+ * Runtime binding (resolved by {@link DefaultExplicitModelPathLoader}): the
+ * `llama-cpp-capacitor` context on mobile (`ELIZA_PLATFORM=android|ios`), and on
+ * desktop the libllama shim (`native/eliza-generic-llama/`, #8808 C3) which loads
+ * the GGUF's OWN tokenizer — the fused `libelizainference` could not, since it
+ * tokenizes with the eliza-1 bundle vocab. When neither runtime is available
+ * (e.g. the desktop shim is unbuilt) `available()` reports false and the
+ * dispatcher raises a typed `GenericRuntimeUnavailableError` rather than
+ * mis-loading the GGUF through the bundle-locked fused path.
  */
 
 import type { CapacitorLlamaContext } from "../adapters/capacitor-llama/types";
+import { DesktopGenericLlamaLoader } from "./generic-llama/desktop-generic-llama";
 import type {
 	BackendPlan,
 	GenerateArgs,
@@ -73,6 +75,31 @@ export class CapacitorExplicitModelPathLoader
 	}
 }
 
+/**
+ * Host-resolving loader: the desktop libllama shim (#8808 C3) when present,
+ * else the mobile `llama-cpp-capacitor` binding. This is the default the
+ * dispatcher + assignment validation use, so a generic GGUF now serves real
+ * text on desktop wherever the shim is staged, and falls back to the typed
+ * `GenericRuntimeUnavailableError` only when neither runtime is available.
+ */
+export class DefaultExplicitModelPathLoader implements ExplicitModelPathLoader {
+	private readonly desktop = new DesktopGenericLlamaLoader();
+	private readonly mobile = new CapacitorExplicitModelPathLoader();
+
+	async available(): Promise<boolean> {
+		return (await this.desktop.available()) || (await this.mobile.available());
+	}
+
+	async load(args: {
+		modelPath: string;
+		contextSize?: number;
+		gpuLayers?: number;
+	}): Promise<CapacitorLlamaContext> {
+		if (await this.desktop.available()) return this.desktop.load(args);
+		return this.mobile.load(args);
+	}
+}
+
 export class GenericGgufBackend implements LocalInferenceBackend {
 	readonly id = "generic-gguf" as const;
 
@@ -80,7 +107,7 @@ export class GenericGgufBackend implements LocalInferenceBackend {
 	private loadedPath: string | null = null;
 
 	constructor(
-		private readonly loader: ExplicitModelPathLoader = new CapacitorExplicitModelPathLoader(),
+		private readonly loader: ExplicitModelPathLoader = new DefaultExplicitModelPathLoader(),
 	) {}
 
 	async available(): Promise<boolean> {

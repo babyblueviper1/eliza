@@ -14,7 +14,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { findCatalogModel, isDefaultEligibleId } from "./catalog";
-import { CapacitorExplicitModelPathLoader } from "./generic-gguf-backend";
+import { DefaultExplicitModelPathLoader } from "./generic-gguf-backend";
 import { localInferenceRoot } from "./paths";
 import { listInstalledModels } from "./registry";
 import {
@@ -85,7 +85,7 @@ export function canServeRuntimeClassOnHost(
 	runtimeClass: RuntimeClass,
 	loader: {
 		available(): boolean | Promise<boolean>;
-	} = new CapacitorExplicitModelPathLoader(),
+	} = new DefaultExplicitModelPathLoader(),
 ): boolean | Promise<boolean> {
 	if (runtimeClass === "fused-eliza1") return true;
 	return loader.available();
